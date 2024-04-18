@@ -6,6 +6,7 @@ def main():
     graph_8 = Graph(data=raw_data, name="Graph 10")
     graph_8.print_constraint_table()
     graph_8.print_graph()
+    graph_8.get_ranks()
     return 0
 
 if __name__ == "__main__":
