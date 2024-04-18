@@ -144,6 +144,32 @@ class Graph :
         # Prints the table.
         print(tabulate(self.__constraint_table_data, headers=self.__constraint_table_headers, tablefmt="simple_grid"))
 
+    def get_ranks(self):
+
+        """
+        Returns the ranks of the constraint table.
+
+        """
+        print(self.__constraint_table_data)
+
+        ranks_dic = {}
+
+        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
+            print (task_name1, task_duration, task_constraints)
+            for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
+                print(task_name2, task_duration, task_constraints)
+                for constraint in task_constraints :
+                    if task_name1 == task_name2 :
+                        if task_constraints != "None":
+                            if constraint != "," and constraint!= " ":
+                                ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+                    else :
+                        if constraint == task_name1 :
+                            if constraint != "None" :
+                                if constraint != "," and constraint != " ":
+                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+        return ranks_dic
+      
     def check_cycle(self):
         # Create a copy of constraint table
         constraint_table_cp = self.__constraint_table_data.copy()
@@ -188,29 +214,5 @@ class Graph :
             return True
         return False
 
-    def get_ranks(self):
 
-        """
-        Returns the ranks of the constraint table.
-
-        """
-        print(self.__constraint_table_data)
-
-        ranks_dic = {}
-
-        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
-            print (task_name1, task_duration, task_constraints)
-            for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
-                print(task_name2, task_duration, task_constraints)
-                for constraint in task_constraints :
-                    if task_name1 == task_name2 :
-                        if task_constraints != "None":
-                            if constraint != "," and constraint!= " ":
-                                ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
-                    else :
-                        if constraint == task_name1 :
-                            if constraint != "None" :
-                                if constraint != "," and constraint != " ":
-                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
-        return ranks_dic
 
