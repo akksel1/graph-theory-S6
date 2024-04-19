@@ -214,5 +214,20 @@ class Graph :
             return True
         return False
 
+    def check_negative(self):
+        i=0
+        negative = False
+
+        #Cross the graph
+        while negative is False and i < len(self.__constraint_table_data):
+            # Check the sign of duration
+            if int(self.__constraint_table_data[i][1])<0 :
+                negative = True
+            i+=1
+        return negative
+
+
+
+
 
 
