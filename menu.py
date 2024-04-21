@@ -49,12 +49,13 @@ def menu2(graphNb):
         elif choice is '2':
             graph.get_value_matrix()
         elif choice is '3':
+            print("\n\n")
             if(graph.check_cycle() is False):
-                print("No Cycle detected.")
+                print("\n\nNo Cycle detected.")
             else:
-                print("Cycle detected.")
+                print("\n\nCycle detected.")
         elif choice is '4':
-            if(graph.check_negative() is False):
+            if(graph.check_negative() is True):
                 print("Negative weighted edges detected.")
             else:
                 print("No negative weighted edges detected.")
@@ -63,7 +64,14 @@ def menu2(graphNb):
         elif choice is '6':
             print("5")
         elif choice is '7':
-            print("6")
+            if(graph.check_cycle() is False and graph.check_negative() is False):
+                graph.print_critical_paths()
+            else:
+                if graph.check_cycle() is True:
+                    print("\n\nERROR: Cycle detected.")
+                if graph.check_negative() is True:
+                    print("\n\nERROR: Negative weighted edges detected. .")
+
         elif choice is '8':
             stop = True
 
