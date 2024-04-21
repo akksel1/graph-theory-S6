@@ -2,7 +2,7 @@ from tabulate import tabulate
 import networkx as nx
 import matplotlib.pyplot as plt
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 
 
 class Graph :
@@ -167,33 +167,6 @@ class Graph :
         # Prints the table.
         print(tabulate(self.__constraint_table_data, headers=self.__constraint_table_headers, tablefmt="simple_grid"))
 
-    def get_ranks(self):
-
-        """
-        Returns the ranks of the constraint table.
-
-        """
-        #Initialize the dictionnary where we will store the task_name (key) and the rank (value)
-        ranks_dic = {}
-
-        #Go through the constraint table data twice in order to get the number of predecessors & successors of each task
-        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
-            for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
-                for constraint in task_constraints :
-                    #If the both task_name are equal, then the ranks will be +1 each time we have a new constraint
-                    if task_name1 == task_name2 :
-                        if task_constraints != "None":
-                            if constraint != "," and constraint!= " ":
-                                ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
-                    #If we find among the predecessor of another task, the task itsself, then its rank will be +1
-                    else :
-                        if constraint == task_name1 :
-                            if constraint != "None" :
-                                if constraint != "," and constraint != " ":
-                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
-        for key in ranks_dic.keys():
-            print("The rank of", key, "is", ranks_dic[key])
-        return ranks_dic
       
     def check_cycle(self):
         # Create a copy of constraint table
@@ -238,6 +211,7 @@ class Graph :
         if len(constraint_list) > 1 :
             return True
         return False
+
 
     def check_negative(self):
         i=0
@@ -313,36 +287,72 @@ class Graph :
                 print(value_matrix[i][j], end='     ')
         return value_matrix
 
-    def get_earliest_date(self):
-            vertices = [task_name[0] for task_name in self.__constraint_table_data]
-            print(vertices)
-            # Initialize a dictionary to store the earliest start time for each vertex
-            earliest_start = {vertex: 0 for vertex in vertices}
+    def get_ranks(self):
+        rank = defaultdict(int)
+        incoming_edges = defaultdict(int)
 
-            # Initialize a dictionary to store the cumulative duration for each vertex
-            cumulative_duration = {vertex: 0 for vertex in vertices}
+        successors = defaultdict(list)
 
-            # Create a dictionary to store the predecessors for each vertex
-            predecessors_dict = defaultdict(list)
+        for task, _, *constraints in self.__constraint_table_data:
+            rank[task] = 1
+            incoming_edges[task] = 0
+            for constraint in constraints:
+
+                constraints_list = constraint.split(', ')
+                for constraint_vertex in constraints_list:
+                    if constraint_vertex != 'None' and constraint_vertex != '':
+                        successors[constraint_vertex.strip()].append(task)
+                        incoming_edges[task] += 1
+        initial_queue = deque(task for task in rank if incoming_edges[task] == 0)
+        queue = initial_queue.copy()
+        while queue:
+            vertex = queue.popleft()
+            for successor in successors[vertex]:
+                incoming_edges[successor] -= 1
+                rank[successor] = max(rank[successor], rank[vertex] + 1)
+                if incoming_edges[successor] == 0:
+                    queue.append(successor)
+        for key,value in rank.items():
+            print("Rank of", key, "is", value)
+        return rank
+
+
+
+    def calculate_earliest_dates(self,rank_dict):
+
+        # Créer un dictionnaire pour stocker les dates de début les plus tôt
+        earliest_start = {}
+
+        # Initialiser les dates de début pour les tâches sans contraintes (rang = 0)
+        for task, rank in rank_dict.items():
+            if rank == 0:
+                earliest_start[task] = 0
+        sorted_tasks = sorted(rank_dict.items(), key=lambda x: x[1])
+        print(sorted_tasks)
+
+        # Calculer les dates de début les plus tôt pour chaque tâche
+        for task1, _ in sorted_tasks:
             for task, duration, *constraints in self.__constraint_table_data:
-                for constraint in constraints:
-                    predecessors_dict[task].append(constraint)
+                if task1 == task :
+                    print(task1,task)
+                    # Récupérer les dates de début des tâches précédentes
+                    start_times = []
+                    for constraint in constraints[0].split(','):
+                        constraint = constraint.strip()
+                        print(constraint)
+                    if constraint in earliest_start:
+                        start_times.append(earliest_start[constraint] + int(duration))
 
-            # Topological sorting
-            for vertex in vertices:
-                if not predecessors_dict[vertex]:  # If the vertex has no predecessors
-                    continue
+            # Calculer la date de début la plus tôt si des contraintes ont été trouvées
+                    if start_times:
+                        earliest_start[task] = max(start_times)
+                    else :
+                        earliest_start[task] = 0
+                        print(earliest_start[task], "earliest_task", task)
+        print (earliest_start)
+        return earliest_start
 
-                # Calculate the earliest start time for the current vertex
-                earliest_start_time = max(
-                    earliest_start[constraint] + cumulative_duration[constraint] for constraint in
-                    predecessors_dict[vertex])
-                earliest_start[vertex] = earliest_start_time
 
-                # Update the cumulative duration for the current vertex
-                cumulative_duration[vertex] = earliest_start_time + int(duration)
-            print(earliest_start)
-            return earliest_start
 
 
 
