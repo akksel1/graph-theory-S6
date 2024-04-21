@@ -1,6 +1,8 @@
 from tabulate import tabulate
 import networkx as nx
 import matplotlib.pyplot as plt
+import re
+from collections import defaultdict
 
 
 class Graph :
@@ -171,24 +173,26 @@ class Graph :
         Returns the ranks of the constraint table.
 
         """
-        print(self.__constraint_table_data)
-
+        #Initialize the dictionnary where we will store the task_name (key) and the rank (value)
         ranks_dic = {}
 
+        #Go through the constraint table data twice in order to get the number of predecessors & successors of each task
         for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
-            print (task_name1, task_duration, task_constraints)
             for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
-                print(task_name2, task_duration, task_constraints)
                 for constraint in task_constraints :
+                    #If the both task_name are equal, then the ranks will be +1 each time we have a new constraint
                     if task_name1 == task_name2 :
                         if task_constraints != "None":
                             if constraint != "," and constraint!= " ":
                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+                    #If we find among the predecessor of another task, the task itsself, then its rank will be +1
                     else :
                         if constraint == task_name1 :
                             if constraint != "None" :
                                 if constraint != "," and constraint != " ":
                                  ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+        for key in ranks_dic.keys():
+            print("The rank of", key, "is", ranks_dic[key])
         return ranks_dic
       
     def check_cycle(self):
@@ -248,6 +252,97 @@ class Graph :
         return negative
 
 
+
+    def get_value_matrix(self):
+        value_matrix = [[0 for j in range(len(self.__constraint_table_data)+3)] for i in range(len(self.__constraint_table_data)+3)]
+        #Initalize the Matrix with the Index from 0 to the number of vertices, with a * everywhere else
+        for i in range(len(value_matrix)):
+            for j in range(len(value_matrix)):
+                if i == 0 or j == 0:
+                    if i == 1 or j == 1:
+                        value_matrix[i][j] = 0
+                    elif i == len(value_matrix) or j == len(value_matrix):
+                        value_matrix[i][j] = len(value_matrix) + 1
+                    elif i ==0 and j!=0:
+                        value_matrix[i][j] = j - 1
+                    elif j ==0 and i!=0:
+                        value_matrix[i][j] = i - 1
+                    elif i==0 and j==0:
+                        value_matrix[i][j] = ' '
+
+                else :
+                    value_matrix[i][j] = '*'
+
+        #Setting up the predecessor set which will tell us the vertices who has no successor, then they will be automatically directed to the output/end vertex of the graph
+        predecessors = set()
+        all_task = set()
+        for i in range(len(self.__constraint_table_data)):
+            all_task.add(i + 1)
+        for (task_name1, task_duration, task_constraints) in self.__constraint_table_data:
+            if task_constraints != "None":
+                numbers = re.findall(r'\d+', task_constraints)
+                task_constraints = [int(num) for num in numbers]
+                for constraint in task_constraints:
+                    if constraint != "," and constraint != " " and constraint and task_constraints != "None":
+                        predecessors.add(constraint)
+        predecessors = set(map(int, predecessors))
+        no_predeccessor = all_task - predecessors
+
+        #Going through the constraint table data in order to fill up the value matrix
+        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
+
+            #If there is a constraint, we take the task_duration of the constraint and put it in the value matrix
+            if task_constraints != "None" :
+                numbers = re.findall(r'\d+', task_constraints)
+                task_constraints = [int(num) for num in numbers]
+                for constraint in task_constraints:
+                        for (task_name2, task_duration, task_constraints) in self.__constraint_table_data:
+                                if(constraint == int(task_name2) ):
+                                    value_matrix[int(constraint) + 1][int(task_name1) +1 ] =int(task_duration)
+            #Else, we just say that as the vertex has no constraint, he will be a possible start/input from the ficticious task 0
+            else :
+                value_matrix[1][int(task_name1)+1] = 0
+        #For those who doesn't have any successor, they will be linked to the end/output ficticious task N+1
+        for (task_name, task_duration, task_constraints) in self.__constraint_table_data:
+            if (int(task_name) in no_predeccessor) :
+                    value_matrix[int(task_name)+1][len(self.__constraint_table_data) +2 ] =task_duration
+
+        for i in range(len(value_matrix)):
+            print('\n')
+            for j in range(len(value_matrix)):
+                print(value_matrix[i][j], end='     ')
+        return value_matrix
+
+    def get_earliest_date(self):
+            vertices = [task_name[0] for task_name in self.__constraint_table_data]
+            print(vertices)
+            # Initialize a dictionary to store the earliest start time for each vertex
+            earliest_start = {vertex: 0 for vertex in vertices}
+
+            # Initialize a dictionary to store the cumulative duration for each vertex
+            cumulative_duration = {vertex: 0 for vertex in vertices}
+
+            # Create a dictionary to store the predecessors for each vertex
+            predecessors_dict = defaultdict(list)
+            for task, duration, *constraints in self.__constraint_table_data:
+                for constraint in constraints:
+                    predecessors_dict[task].append(constraint)
+
+            # Topological sorting
+            for vertex in vertices:
+                if not predecessors_dict[vertex]:  # If the vertex has no predecessors
+                    continue
+
+                # Calculate the earliest start time for the current vertex
+                earliest_start_time = max(
+                    earliest_start[constraint] + cumulative_duration[constraint] for constraint in
+                    predecessors_dict[vertex])
+                earliest_start[vertex] = earliest_start_time
+
+                # Update the cumulative duration for the current vertex
+                cumulative_duration[vertex] = earliest_start_time + int(duration)
+            print(earliest_start)
+            return earliest_start
 
 
 
