@@ -1,8 +1,10 @@
 from tabulate import tabulate
 import networkx as nx
 import matplotlib.pyplot as plt
+import copy
 import re
 from collections import defaultdict
+
 
 
 class Graph :
@@ -24,6 +26,9 @@ class Graph :
         """
         self.__graph = {}
 
+        #Same as the previous graph but modified to have a critical path (node 0 and node n+1).
+        self.__critical_graph = {}
+
         #raw data (from graph file).
         self.__data  = data
 
@@ -35,6 +40,19 @@ class Graph :
 
         #constraint table headers (columns).
         self.__constraint_table_headers = ["Task", "Duration", "Constraints"]
+
+        #Dict that will associates tasks with their duration.
+        self.__task_dur = {}
+
+        #Will store constraint table as the same way graph is stored :
+        """{
+            "1"(Node name) : (Predecessors)["2"(Predecessor Node name), ...], 
+            ...
+        }"""
+        self.__raw_constraint_table = {}
+
+        #Will store critcal paths.
+        self.__critical_paths = []
 
         #Executing necessary function to build the graph and its constraint table.
         self.__build()
@@ -50,8 +68,6 @@ class Graph :
         if line_table[-1] == "" :
             line_table.pop(line_table.index(line_table[-1]))
         
-        #Temp dict that will associates tasks with their duration.
-        task_dur = {}
 
         #Adding all the tasks to the graph and storing their duration.
         for line in  line_table :
@@ -64,7 +80,7 @@ class Graph :
 
             self.__graph.update({task_name:[]})
 
-            task_dur.update({task_name:task_duration})
+            self.__task_dur.update({task_name:task_duration})
 
         #iterating through each of the lines.
         for line in  line_table :
@@ -77,6 +93,9 @@ class Graph :
 
             #retrieves task constraints (if any) and store them in a temporary variable 
             task_constraints_temp = line.split(" ")[2:len(line.split(" "))]
+
+            #Adding the task in the raw constraint table.
+            self.__raw_constraint_table.update({task_name:[]})
 
             #Sometimes there is a missing space in the files so task_constraint_temp is emtpy.
             if len(task_constraints_temp) == 0 :
@@ -94,9 +113,12 @@ class Graph :
                 for constraint in task_constraints_temp :
                     task_constraints += constraint + ", "
 
-                    #Adding the vertice and its weight to the graph
+                    #Adding the vertice and its weight to the graph.
                     if constraint != "" :
-                        self.__graph[constraint].append({task_name:task_dur[constraint]})
+                        self.__graph[constraint].append({task_name:self.__task_dur[constraint]})
+
+                        #Adding the constraint to the raw constraint table.
+                        self.__raw_constraint_table[task_name].append(constraint)
                 
                 #remove the last ", " for the table to look good.
                 task_constraints = task_constraints[0:len(task_constraints)-2]
@@ -104,6 +126,151 @@ class Graph :
             #populate the constraint_table data variable.
             self.__constraint_table_data.append([task_name, task_duration, task_constraints])
 
+        self.__compute_critical_path()
+
+    def __compute_critical_path(self) :
+        """
+        Compute the critical paths from the graph.
+        """
+
+        #Getting the name of the n+1 node.
+        exit_node = str(len(self.__graph)+1)
+        
+        def find_no_predecessors_nodes() :
+            """
+            Returns the list of all nodes without predecessors in a graph.
+            """
+            node_list = []
+            
+            #Iterates through each node of the constraint table.
+            for node in self.__raw_constraint_table :
+
+                #If the tasks has no constraints (node has no predecessors):
+                if len(self.__raw_constraint_table[node]) == 0 :
+
+                    #Adds the node to the list.
+                    node_list.append(node)
+
+            return node_list
+        
+        def find_no_sucessors_nodes() :
+            """
+            Returns the list of all nodes without successors un a graph
+            """
+            node_list = []
+
+            #Iterates through each node of the graph.
+            for node in self.__graph :
+
+                #If the node has no successor :
+                if len(self.__graph[node]) == 0 :
+
+                    #Adds the node to the list.
+                    node_list.append(node)
+
+            return node_list
+        
+        def add_entry_exit_nodes() :
+            """
+            Adds the 0 and n+1 nodes to the graph (critical_graph).
+            """
+        
+            #Find nodes with no predecessors.
+            no_pre = find_no_predecessors_nodes()
+           
+            #find nodes with no successors.
+            no_suc = find_no_sucessors_nodes()
+
+            #Initializing the critical graph sith the same values as the graph.
+            self.__critical_graph = copy.deepcopy(self.__graph) #Here we make sure to copy the variable so the changes on critical graph won't affect the classic graph.
+            
+
+            #Adds the node 0 to the critical graph.
+            self.__critical_graph.update({'0':[]})
+
+            #Adds the n+1 node to the critical graph.
+            self.__critical_graph.update({exit_node:[]})
+            
+            #Adding verticies going from node 0:
+            for node in no_pre :
+                
+                #The weight is 0.
+                self.__critical_graph['0'].append({node:"0"})
+
+            #Adding verticies going to node n+1:
+            for node in no_suc :
+                
+                #Retrieving the weight from task_dur.
+                self.__critical_graph[node].append({exit_node:self.__task_dur[node]})
+
+        def simplify_graph():
+            """
+            Gets rid of the weights.
+            """
+            simplified_graph = {}
+            for node, edges in self.__critical_graph.items():
+                simplified_graph[node] = []
+                for edge in edges:
+                    for target, weight in edge.items():
+                        simplified_graph[node].append(target)
+            return simplified_graph
+
+        def find_paths(graph, start, end, path=[]):
+            """
+            Recursive function that get all paths from a starting node to an end node.
+            """
+            path = path + [start]
+            if start == end:
+                return [path]
+            if start not in graph:
+                return []
+            paths = []
+            for node in graph[start]:
+                if node not in path:  # Avoid cycles
+                    newpaths = find_paths(graph, node, end, path)
+                    for newpath in newpaths:
+                        paths.append(newpath)
+            return paths
+        
+        def path_length(path) :
+            """
+            Compute the length of a path (adds all its weights).
+            """
+
+            length = 0
+
+            #Iterating through all the path -1 as the exit node has no weight.
+            for i in range(len(path)-1) :
+
+                #Entry node (0) has no weight on its vertices so we can skeep it.
+                if path[i] != "0" :
+                    length += int(self.__task_dur[path[i]])
+
+            return length
+
+        #Adding entry and exit nodes.
+        add_entry_exit_nodes()
+
+        #Simplify the graph 
+        simp_crit_graph = simplify_graph()
+
+        #Retrieves all paths from entry to exit node (0 to n+1)
+        all_paths_entry_to_exit = find_paths(simp_crit_graph, '0', exit_node)
+        
+        #Will store all lengths
+        all_lengths = []
+
+        #Getting all paths length
+        for path in all_paths_entry_to_exit :
+            all_lengths.append(path_length(path))
+       
+        #Retrieving the max length
+        max_length = max(all_lengths)
+        
+        #Adding critical paths to the correct variable:
+        for i in range(len(all_lengths)) :
+            if all_lengths[i] == max_length :
+                self.__critical_paths.append(all_paths_entry_to_exit[i])
 
 
     def print_graph(self) :
@@ -149,6 +316,72 @@ class Graph :
 
         #Sets the plot title.
         ax.set_title(self.__name+" Visual Representation", fontsize=20, fontweight='bold')
+
+        #Sets the plot windows name.
+        plt.get_current_fig_manager().set_window_title('Graph Visualization Window')
+
+        #Plots the result.
+        plt.show()
+
+    def print_critical_paths(self) :
+        """
+        Plots the critical graph and higlights critical paths.
+        """
+        print("Critical paths :", self.__critical_paths)
+        #Will store each node that is on a critical path.
+        critical_nodes = set()
+
+        #Creates a list to hold tuples of edges in critical paths
+        critical_edges = []
+
+        for path in self.__critical_paths:
+
+            critical_nodes.update(path)
+
+            # Add edge tuples to the list
+            critical_edges.extend([(path[i], path[i+1]) for i in range(len(path)-1)])
+
+        #Creates a new graph plot.
+        plotted_graph = nx.DiGraph()
+
+        #Iterates through the graph structure
+        for node in self.__critical_graph :
+            
+            #Adds each node to the plot.
+            plotted_graph.add_node(node)
+
+            #Iterates through each edge of the node.
+            for edge in self.__critical_graph[node]:
+
+                #Retrieves the next node.
+                adjacent_node = list(edge.keys())[0]
+
+                #Gets the weight.
+                weight = edge[adjacent_node]
+
+                #Adds the edge to the plot.
+                plotted_graph.add_edge(node, adjacent_node, weight=weight)
+        
+        #Create the plot interface
+        fig, ax = plt.subplots(figsize=(10, 7))
+
+        #Gives the graph plot a circular shape, for it to be clear.
+        pos  = nx.circular_layout(plotted_graph)
+
+        #Draws the graph on the plot.
+        node_colors = ['red' if node in critical_nodes else 'skyblue' for node in plotted_graph]
+        edge_colors = ['red' if (u, v) in critical_edges or (v, u) in critical_edges else 'black' for u, v in plotted_graph.edges()]
+
+        nx.draw(plotted_graph, pos, ax=ax, with_labels=True, node_color=node_colors, edge_color=edge_colors, node_size=2000, font_size=16, font_color="black")
+        
+        #Indicate to use the weights as edge label.
+        edge_labels = nx.get_edge_attributes(plotted_graph, 'weight')
+
+        #Draws the edges.
+        nx.draw_networkx_edge_labels(plotted_graph, pos, edge_labels=edge_labels)
+
+        #Sets the plot title.
+        ax.set_title(self.__name+" Critical Paths Representation (in red)", fontsize=20, fontweight='bold')
 
         #Sets the plot windows name.
         plt.get_current_fig_manager().set_window_title('Graph Visualization Window')
