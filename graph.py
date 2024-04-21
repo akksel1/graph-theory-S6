@@ -265,8 +265,15 @@ class Graph :
             all_lengths.append(path_length(path))
        
         #Retrieving the max length
-        max_length = max(all_lengths)
-        
+        #max_length = max(all_lengths)
+
+        if all_lengths:
+            max_length = max(all_lengths)
+            # logic to handle found paths
+        else:
+            max_length = 0  # or appropriate error handling
+            print("No paths found from entry to exit nodes.")
+
         #Adding critical paths to the correct variable:
         for i in range(len(all_lengths)) :
             if all_lengths[i] == max_length :
@@ -429,6 +436,11 @@ class Graph :
         return ranks_dic
       
     def check_cycle(self):
+        '''
+        Function that checks if there is any cycle on the graph. Returns a boolean:
+            False: No Cycle detected
+            True: Cycle detected
+        '''
         # Create a copy of constraint table
         constraint_table_cp = self.__constraint_table_data.copy()
 
@@ -463,8 +475,12 @@ class Graph :
 
                 #If not, remove the vertex from the graph
                 if isIn == False:
+                    print("Eliminating vertex #",vertex)
                     constraint_table_cp.pop(i)
                     constraint_list.pop(i)
+                    print("Remaining vertices:")
+                    for a in range(0,len(constraint_table_cp)):
+                        print("Vertex #",constraint_table_cp[a][0])
                     changeCpt+=1
                 i+=1
 
@@ -473,13 +489,18 @@ class Graph :
         return False
 
     def check_negative(self):
+        '''
+        Function that checks if there is any negative weighted edges on the graph. Returns a boolean:
+            False: Negative edges detected
+            True: No Negative edges detected
+        '''
         i=0
         negative = False
 
         #Cross the graph
         while negative is False and i < len(self.__constraint_table_data):
             # Check the sign of duration
-            if int(self.__constraint_table_data[i][1])<0 :
+            if int(self.__constraint_table_data[i][1])<0:
                 negative = True
             i+=1
         return negative
