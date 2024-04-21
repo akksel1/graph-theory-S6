@@ -150,14 +150,11 @@ class Graph :
         Returns the ranks of the constraint table.
 
         """
-        print(self.__constraint_table_data)
 
         ranks_dic = {}
 
         for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
-            print (task_name1, task_duration, task_constraints)
             for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
-                print(task_name2, task_duration, task_constraints)
                 for constraint in task_constraints :
                     if task_name1 == task_name2 :
                         if task_constraints != "None":
@@ -168,5 +165,61 @@ class Graph :
                             if constraint != "None" :
                                 if constraint != "," and constraint != " ":
                                  ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+        for key in ranks_dic.keys():
+            print("The rank of", key, "is", ranks_dic[key])
         return ranks_dic
+
+    def get_value_matrix(self):
+        value_matrix = [[0 for j in range(len(self.__constraint_table_data)+3)] for i in range(len(self.__constraint_table_data)+3)]
+        for i in range(len(value_matrix)):
+            for j in range(len(value_matrix)):
+                if i == 0 or j == 0:
+                    if i == 1 or j == 1:
+                        value_matrix[i][j] = 0
+                    elif i == len(value_matrix) or j == len(value_matrix):
+                        value_matrix[i][j] = len(value_matrix) + 1
+                    elif i ==0 and j!=0:
+                        value_matrix[i][j] = j - 1
+                    elif j ==0 and i!=0:
+                        value_matrix[i][j] = i - 1
+                    elif i==0 and j==0:
+                        value_matrix[i][j] = ' '
+
+                else :
+                    value_matrix[i][j] = '*'
+
+        predecessors = set()
+        all_task = set()
+        for i in range(len(self.__constraint_table_data)):
+            all_task.add(i + 1)
+        for (task_name1, task_duration, task_constraints) in self.__constraint_table_data:
+            if task_constraints != "None":
+                for constraint in task_constraints:
+                    if constraint != "," and constraint != " " and constraint and task_constraints != "None":
+                        predecessors.add(constraint)
+        predecessors = set(map(int, predecessors))
+        no_predeccessor = all_task - predecessors
+
+        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
+
+            if task_constraints != "None" :
+                for constraint in task_constraints :
+                        if constraint != "," and constraint != " " and constraint and task_constraints != "None":
+                            for (task_name2, task_duration, task_constraints) in self.__constraint_table_data:
+                                if(constraint == task_name2 ):
+                                    duration = task_duration
+                            value_matrix[int(constraint) + 1][int(task_name1) +1 ] =duration
+            else :
+                value_matrix[1][int(task_name1)+1] = 0
+
+        for (task_name, task_duration, task_constraints) in self.__constraint_table_data:
+            if (int(task_name) in no_predeccessor) :
+                    value_matrix[int(task_name)+1][len(self.__constraint_table_data) +2 ] =task_duration
+
+        for i in range(len(value_matrix)):
+            print('\n')
+            for j in range(len(value_matrix)):
+                print(value_matrix[i][j], end='     ')
+        return value_matrix
+
 
