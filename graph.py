@@ -595,11 +595,12 @@ class Graph :
             # Compute earliest start time for the current task
             earliest_start_time = 0
             for constraint in predecessors_dict[task]:
-                # Compute earliest finish time of the predecessor
-                predecessor_finish_time = earliest_start.get(constraint, 0) + int(
-                    self.__constraint_table_data[int(constraint) - 1][1])
-                # Update earliest start time if necessary
-                earliest_start_time = max(earliest_start_time, predecessor_finish_time)
+                if constraint != '':
+                    # Compute earliest finish time of the predecessor
+                    predecessor_finish_time = earliest_start.get(constraint, 0) + int(
+                        self.__constraint_table_data[int(constraint) - 1][1])
+                    # Update earliest start time if necessary
+                    earliest_start_time = max(earliest_start_time, predecessor_finish_time)
 
             # Update earliest start time of the current task
             earliest_start[task] = earliest_start_time
