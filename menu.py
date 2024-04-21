@@ -60,7 +60,7 @@ def menu2(graphNb):
         elif choice is '5':
             print("5")
         elif choice is '6':
-            print("6")
+            graph.print_critical_paths()
         elif choice is '7':
             stop = True
 
