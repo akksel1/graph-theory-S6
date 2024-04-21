@@ -566,48 +566,86 @@ class Graph :
                 rank[successor] = max(rank[successor], rank[vertex] + 1)
                 if incoming_edges[successor] == 0:
                     queue.append(successor)
-        for key,value in rank.items():
-            print("Rank of", key, "is", value)
         return rank
 
+    def compute_earliest_dates(self, rank):
+        predecessors_dict = {}
 
+        # Iterate through the constraint table data
+        for task, _, *constraints in self.__constraint_table_data:
+            # Extract task name and constraints
+            task_name = task
+            task_constraints = constraints
 
-    def calculate_earliest_dates(self,rank_dict):
+            # Split constraints string into a list if it exists
+            if task_constraints[0] != "None":
+                task_constraints = [constraint.strip() for constraint in task_constraints[0].split(',')]
+            else:
+                task_constraints = []
 
-        # Créer un dictionnaire pour stocker les dates de début les plus tôt
+            # Populate predecessors dictionary
+            predecessors_dict[task_name] = task_constraints
+        # Initialize a dictionary to store the earliest start times of each task
         earliest_start = {}
+        successors = defaultdict(list)
 
-        # Initialiser les dates de début pour les tâches sans contraintes (rang = 0)
-        for task, rank in rank_dict.items():
-            if rank == 0:
-                earliest_start[task] = 0
-        sorted_tasks = sorted(rank_dict.items(), key=lambda x: x[1])
-        print(sorted_tasks)
 
-        # Calculer les dates de début les plus tôt pour chaque tâche
-        for task1, _ in sorted_tasks:
-            for task, duration, *constraints in self.__constraint_table_data:
-                if task1 == task :
-                    print(task1,task)
-                    # Récupérer les dates de début des tâches précédentes
-                    start_times = []
-                    for constraint in constraints[0].split(','):
-                        constraint = constraint.strip()
-                        print(constraint)
-                    if constraint in earliest_start:
-                        start_times.append(earliest_start[constraint] + int(duration))
+        # Iterate through the tasks in topological order (based on rank)
+        for task, duration, *_ in sorted(self.__constraint_table_data, key=lambda x: rank[x[0]]):
+            # Compute earliest start time for the current task
+            earliest_start_time = 0
+            for constraint in predecessors_dict[task]:
+                # Compute earliest finish time of the predecessor
+                predecessor_finish_time = earliest_start.get(constraint, 0) + int(
+                    self.__constraint_table_data[int(constraint) - 1][1])
+                # Update earliest start time if necessary
+                earliest_start_time = max(earliest_start_time, predecessor_finish_time)
 
-            # Calculer la date de début la plus tôt si des contraintes ont été trouvées
-                    if start_times:
-                        earliest_start[task] = max(start_times)
-                    else :
-                        earliest_start[task] = 0
-                        print(earliest_start[task], "earliest_task", task)
-        print (earliest_start)
+            # Update earliest start time of the current task
+            earliest_start[task] = earliest_start_time
         return earliest_start
 
+    def compute_latest_dates(self,earliest):
+        tasks = {}
+        for item in self.__constraint_table_data:
+            task_name = item[0]
+            duration = int(item[1])
+            constraints = item[2].split(', ') if item[2] != 'None' else []
+            tasks[task_name] = {
+                'duration': duration,
+                'constraints': constraints,
+                'predecessors': [],
+                'earliest': earliest.get(task_name),  # Assuming EST is provided or calculated elsewhere
+                'latest': None,
+                'float' : None
+            }
 
+        for task in tasks:
+            for other_task in tasks:
+                if task in tasks[other_task]['constraints']:
+                    tasks[task]['predecessors'].append(other_task)
+        # Calculate EFT based on EST and duration and find the maximum EFT
+        max_earliest = 0
+        for task, details in tasks.items():
+            if details['earliest'] is not None:
+                earliest = details['earliest'] + details['duration']
+                max_earliest = max(max_earliest, earliest)
+            else:
+                print(f"Error: EST not set for task {task}")
+                return
+        for task, details in tasks.items():
+            details['latest'] = max_earliest - details['duration']
 
+        sorted_tasks = sorted(tasks.keys())
+        for task in reversed(sorted_tasks):
+                latest_start = float('inf')
+                for successor in tasks:
+                    if task in tasks[successor]['constraints']:
+                        latest_start = min(latest_start, tasks[successor]['latest'] - tasks[task]['duration'])
+                tasks[task]['latest'] = latest_start if latest_start != float('inf') else tasks[task]['earliest']
+                tasks[task]['float'] = tasks[task]['latest'] - tasks[task]['earliest']
+        for task, details in tasks.items():
+            print(f"Task {task}: Earliest Date = {details['earliest']}, Latest Date = {details['latest']}, Float = {details['float']}")
 
 
 
