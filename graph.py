@@ -2,6 +2,7 @@ from tabulate import tabulate
 import networkx as nx
 import matplotlib.pyplot as plt
 import re
+from collections import defaultdict
 
 
 class Graph :
@@ -42,8 +43,28 @@ class Graph :
         """
         Iterate through raw data and fills __constraint_table_data variable and graph variable.
         """
-        #store each line of the raw data in the line_table table, removing the last one as it is always empty.
-        line_table = self.__data.split("\n")[:len( self.__data.split("\n"))-1]
+        #store each line of the raw data in the line_table table.
+        line_table = self.__data.split("\n")
+
+        #Sometimes last line is empty so we remove it.
+        if line_table[-1] == "" :
+            line_table.pop(line_table.index(line_table[-1]))
+        
+        #Temp dict that will associates tasks with their duration.
+        task_dur = {}
+
+        #Adding all the tasks to the graph and storing their duration.
+        for line in  line_table :
+
+            #retrieves task name 
+            task_name = line.split(" ")[0]
+
+            #retrieves task duration
+            task_duration = line.split(" ")[1]
+
+            self.__graph.update({task_name:[]})
+
+            task_dur.update({task_name:task_duration})
 
         #iterating through each of the lines.
         for line in  line_table :
@@ -57,8 +78,9 @@ class Graph :
             #retrieves task constraints (if any) and store them in a temporary variable 
             task_constraints_temp = line.split(" ")[2:len(line.split(" "))]
 
-            #Adding the task to the graph.
-            self.__graph.update({task_name:[]})
+            #Sometimes there is a missing space in the files so task_constraint_temp is emtpy.
+            if len(task_constraints_temp) == 0 :
+                task_constraints_temp.append("")
             
             #if task has no constraints, the table looks like [''], so we are replacing it by ['None'] to match the example in appendix.
             if task_constraints_temp[0] == "":
@@ -72,9 +94,9 @@ class Graph :
                 for constraint in task_constraints_temp :
                     task_constraints += constraint + ", "
 
-                    #Adding the vertice and its seight to the graph
+                    #Adding the vertice and its weight to the graph
                     if constraint != "" :
-                        self.__graph[task_name].append({constraint:task_duration})
+                        self.__graph[constraint].append({task_name:task_dur[constraint]})
                 
                 #remove the last ", " for the table to look good.
                 task_constraints = task_constraints[0:len(task_constraints)-2]
@@ -231,9 +253,6 @@ class Graph :
 
 
 
-
-
-
     def get_value_matrix(self):
         value_matrix = [[0 for j in range(len(self.__constraint_table_data)+3)] for i in range(len(self.__constraint_table_data)+3)]
         #Initalize the Matrix with the Index from 0 to the number of vertices, with a * everywhere else
@@ -293,5 +312,38 @@ class Graph :
             for j in range(len(value_matrix)):
                 print(value_matrix[i][j], end='     ')
         return value_matrix
+
+    def get_earliest_date(self):
+            vertices = [task_name[0] for task_name in self.__constraint_table_data]
+            print(vertices)
+            # Initialize a dictionary to store the earliest start time for each vertex
+            earliest_start = {vertex: 0 for vertex in vertices}
+
+            # Initialize a dictionary to store the cumulative duration for each vertex
+            cumulative_duration = {vertex: 0 for vertex in vertices}
+
+            # Create a dictionary to store the predecessors for each vertex
+            predecessors_dict = defaultdict(list)
+            for task, duration, *constraints in self.__constraint_table_data:
+                for constraint in constraints:
+                    predecessors_dict[task].append(constraint)
+
+            # Topological sorting
+            for vertex in vertices:
+                if not predecessors_dict[vertex]:  # If the vertex has no predecessors
+                    continue
+
+                # Calculate the earliest start time for the current vertex
+                earliest_start_time = max(
+                    earliest_start[constraint] + cumulative_duration[constraint] for constraint in
+                    predecessors_dict[vertex])
+                earliest_start[vertex] = earliest_start_time
+
+                # Update the cumulative duration for the current vertex
+                cumulative_duration[vertex] = earliest_start_time + int(duration)
+            print(earliest_start)
+            return earliest_start
+
+
 
 
