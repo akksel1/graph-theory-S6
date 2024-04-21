@@ -1,12 +1,16 @@
 import utilities as utils
 from graph import Graph
+import menu
+
 
 def main():
-    raw_data = utils.extract_data("table 10")
-    graph_8 = Graph(data=raw_data, name="Graph 10")
-    graph_8.print_constraint_table()
-    graph_8.print_graph()
-    graph_8.get_ranks()
+    menu.menu()
+    #raw_data = utils.extract_data("table 2")
+    #graph_8 = Graph(data=raw_data, name="Graph 10")
+    #graph_8.print_constraint_table()
+    #graph_8.print_graph()
+    #graph_8.get_ranks()
+    #graph_8.get_value_matrix()
     return 0
 
 if __name__ == "__main__":

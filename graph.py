@@ -1,6 +1,7 @@
 from tabulate import tabulate
 import networkx as nx
 import matplotlib.pyplot as plt
+import re
 
 
 class Graph :
@@ -150,16 +151,19 @@ class Graph :
         Returns the ranks of the constraint table.
 
         """
-
+        #Initialize the dictionnary where we will store the task_name (key) and the rank (value)
         ranks_dic = {}
 
+        #Go through the constraint table data twice in order to get the number of predecessors & successors of each task
         for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
             for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
                 for constraint in task_constraints :
+                    #If the both task_name are equal, then the ranks will be +1 each time we have a new constraint
                     if task_name1 == task_name2 :
                         if task_constraints != "None":
                             if constraint != "," and constraint!= " ":
                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+                    #If we find among the predecessor of another task, the task itsself, then its rank will be +1
                     else :
                         if constraint == task_name1 :
                             if constraint != "None" :
@@ -232,6 +236,7 @@ class Graph :
 
     def get_value_matrix(self):
         value_matrix = [[0 for j in range(len(self.__constraint_table_data)+3)] for i in range(len(self.__constraint_table_data)+3)]
+        #Initalize the Matrix with the Index from 0 to the number of vertices, with a * everywhere else
         for i in range(len(value_matrix)):
             for j in range(len(value_matrix)):
                 if i == 0 or j == 0:
@@ -249,30 +254,36 @@ class Graph :
                 else :
                     value_matrix[i][j] = '*'
 
+        #Setting up the predecessor set which will tell us the vertices who has no successor, then they will be automatically directed to the output/end vertex of the graph
         predecessors = set()
         all_task = set()
         for i in range(len(self.__constraint_table_data)):
             all_task.add(i + 1)
         for (task_name1, task_duration, task_constraints) in self.__constraint_table_data:
             if task_constraints != "None":
+                numbers = re.findall(r'\d+', task_constraints)
+                task_constraints = [int(num) for num in numbers]
                 for constraint in task_constraints:
                     if constraint != "," and constraint != " " and constraint and task_constraints != "None":
                         predecessors.add(constraint)
         predecessors = set(map(int, predecessors))
         no_predeccessor = all_task - predecessors
 
+        #Going through the constraint table data in order to fill up the value matrix
         for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
 
+            #If there is a constraint, we take the task_duration of the constraint and put it in the value matrix
             if task_constraints != "None" :
-                for constraint in task_constraints :
-                        if constraint != "," and constraint != " " and constraint and task_constraints != "None":
-                            for (task_name2, task_duration, task_constraints) in self.__constraint_table_data:
-                                if(constraint == task_name2 ):
-                                    duration = task_duration
-                            value_matrix[int(constraint) + 1][int(task_name1) +1 ] =duration
+                numbers = re.findall(r'\d+', task_constraints)
+                task_constraints = [int(num) for num in numbers]
+                for constraint in task_constraints:
+                        for (task_name2, task_duration, task_constraints) in self.__constraint_table_data:
+                                if(constraint == int(task_name2) ):
+                                    value_matrix[int(constraint) + 1][int(task_name1) +1 ] =int(task_duration)
+            #Else, we just say that as the vertex has no constraint, he will be a possible start/input from the ficticious task 0
             else :
                 value_matrix[1][int(task_name1)+1] = 0
-
+        #For those who doesn't have any successor, they will be linked to the end/output ficticious task N+1
         for (task_name, task_duration, task_constraints) in self.__constraint_table_data:
             if (int(task_name) in no_predeccessor) :
                     value_matrix[int(task_name)+1][len(self.__constraint_table_data) +2 ] =task_duration
