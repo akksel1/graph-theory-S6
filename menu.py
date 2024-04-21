@@ -36,32 +36,35 @@ def menu2(graphNb):
         # Print menu
         print("\n\n\n\t----- GRAPH", graphNb, "-----\n")
         print("1 - Display the Graph")
-        print("2 - Check if it is a cycle")
-        print("3 - Check if it is negative")
-        print("4 - Compute ranks")
-        print("5 - Compute earliet date, latest date and floats")
-        print("6 - Compute critical path and display it")
-        print("7 - Select another graph")
+        print("2 - Display the Value Matrix")
+        print("3 - Check if it is a cycle")
+        print("4 - Check if it is negative")
+        print("5 - Compute ranks")
+        print("6 - Compute earliet date, latest date and floats")
+        print("7 - Compute critical path and display it")
+        print("8 - Select another graph")
         choice = input("Select an option #: ")
         if choice is '1':
             graph.print_constraint_table()
         elif choice is '2':
+            graph.get_value_matrix()
+        elif choice is '3':
             if(graph.check_cycle() is False):
                 print("No Cycle detected.")
             else:
                 print("Cycle detected.")
-        elif choice is '3':
+        elif choice is '4':
             if(graph.check_negative() is False):
                 print("Negative weighted edges detected.")
             else:
                 print("No negative weighted edges detected.")
-        elif choice is '4':
-            graph.get_ranks()
         elif choice is '5':
-            print("5")
+            graph.get_ranks()
         elif choice is '6':
-            graph.print_critical_paths()
+            print("5")
         elif choice is '7':
+            graph.print_critical_paths()
+        elif choice is '8':
             stop = True
 
     menu()
