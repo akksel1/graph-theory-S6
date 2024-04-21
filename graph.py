@@ -138,8 +138,96 @@ class Graph :
         Prints the constraint table using the tabulate module.
         """
 
-        #Adds a title.
+        # Adds a title.
         print("\t", self.__name, "constraint table")
 
-        #Prints the table.
+        # Prints the table.
         print(tabulate(self.__constraint_table_data, headers=self.__constraint_table_headers, tablefmt="simple_grid"))
+
+    def get_ranks(self):
+
+        """
+        Returns the ranks of the constraint table.
+
+        """
+        print(self.__constraint_table_data)
+
+        ranks_dic = {}
+
+        for(task_name1, task_duration, task_constraints) in self.__constraint_table_data :
+            print (task_name1, task_duration, task_constraints)
+            for(task_name2, task_duration, task_constraints) in self.__constraint_table_data :
+                print(task_name2, task_duration, task_constraints)
+                for constraint in task_constraints :
+                    if task_name1 == task_name2 :
+                        if task_constraints != "None":
+                            if constraint != "," and constraint!= " ":
+                                ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+                    else :
+                        if constraint == task_name1 :
+                            if constraint != "None" :
+                                if constraint != "," and constraint != " ":
+                                 ranks_dic[task_name1] = ranks_dic.get(task_name1, 0) + 1
+        return ranks_dic
+      
+    def check_cycle(self):
+        # Create a copy of constraint table
+        constraint_table_cp = self.__constraint_table_data.copy()
+
+        # Store Constraints in a new list
+        constraint_list = []
+        for i in range(0, len(constraint_table_cp)):
+            myTxt = constraint_table_cp[i][2]
+            if ", " in myTxt:
+                constraint_list.append(myTxt.split(", "))
+            else:
+                constraint_list.append(myTxt)
+
+        # Eliminating vertex that have no predecessors algorithm
+        i = 0
+        #Counts the nb of changes in constraint_table_cp
+        changeCpt = 1
+        #Condition to end the algo
+        while len(constraint_table_cp) > 1 and changeCpt > 0:
+            changeCpt = 0
+            i = 0
+
+            # Cross the graph
+            while i < len(constraint_table_cp):
+                vertex = constraint_table_cp[i][0]
+                # Does this vertex appears in any constraint ?
+                isIn = False
+                j = 0
+                while isIn == False and j < len(constraint_list):
+                    if vertex in constraint_list[j]:
+                        isIn = True
+                    j+=1
+
+                #If not, remove the vertex from the graph
+                if isIn == False:
+                    constraint_table_cp.pop(i)
+                    constraint_list.pop(i)
+                    changeCpt+=1
+                i+=1
+
+        if len(constraint_list) > 1 :
+            return True
+        return False
+
+    def check_negative(self):
+        i=0
+        negative = False
+
+        #Cross the graph
+        while negative is False and i < len(self.__constraint_table_data):
+            # Check the sign of duration
+            if int(self.__constraint_table_data[i][1])<0 :
+                negative = True
+            i+=1
+        return negative
+
+
+
+
+
+
