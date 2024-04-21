@@ -40,7 +40,7 @@ def menu2(graphNb):
         print("3 - Check if it is a cycle")
         print("4 - Check if it is negative")
         print("5 - Compute ranks")
-        print("6 - Compute earliet date, latest date and floats")
+        print("6 - Compute earliest date, latest date and floats")
         print("7 - Compute critical path and display it")
         print("8 - Select another graph")
         choice = input("Select an option #: ")
