@@ -620,31 +620,29 @@ class Graph :
                 'latest': None,
                 'float' : None
             }
-
+            # Initialize LST for all tasks as float('inf')
+        max_eft = max(details['earliest'] + details['duration'] for details in tasks.values())
         for task in tasks:
-            for other_task in tasks:
-                if task in tasks[other_task]['constraints']:
-                    tasks[task]['predecessors'].append(other_task)
-        # Calculate EFT based on EST and duration and find the maximum EFT
-        max_earliest = 0
-        for task, details in tasks.items():
-            if details['earliest'] is not None:
-                earliest = details['earliest'] + details['duration']
-                max_earliest = max(max_earliest, earliest)
-            else:
-                print(f"Error: EST not set for task {task}")
-                return
-        for task, details in tasks.items():
-            details['latest'] = max_earliest - details['duration']
+            tasks[task]['latest'] = float('inf')
 
+        # Set LST for tasks without successors
+        for task in tasks:
+            if not any(task in tasks[other]['constraints'] for other in tasks):
+                tasks[task]['latest'] = max_eft - tasks[task]['duration']
+
+        # Process tasks in reverse topological order to calculate LST
         sorted_tasks = sorted(tasks.keys())
         for task in reversed(sorted_tasks):
+            if tasks[task]['latest'] == float('inf'):  # Only compute if not set by the no-successor default
                 latest_start = float('inf')
+                # Update based on successors
                 for successor in tasks:
                     if task in tasks[successor]['constraints']:
                         latest_start = min(latest_start, tasks[successor]['latest'] - tasks[task]['duration'])
-                tasks[task]['latest'] = latest_start if latest_start != float('inf') else tasks[task]['earliest']
-                tasks[task]['float'] = tasks[task]['latest'] - tasks[task]['earliest']
+                tasks[task]['latest'] = latest_start if latest_start != float('inf') else tasks[task]['latest']
+
+            # Calculate the slack as LST - EST
+            tasks[task]['float'] = tasks[task]['latest'] - tasks[task]['earliest']
         for task, details in tasks.items():
             print(f"Task {task}: Earliest Date = {details['earliest']}, Latest Date = {details['latest']}, Float = {details['float']}")
 

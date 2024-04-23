@@ -64,7 +64,7 @@ def menu2(graphNb):
             for key, value in rank.items():
                 print("Rank of", key, "is", value)
         elif choice is '6':
-            if (graph.check_negative() is True and graph.check_cycle() is False):
+            if (graph.check_negative() is False and graph.check_cycle() is False):
                 rank = graph.get_ranks()
                 earliest = graph.compute_earliest_dates(rank)
                 graph.compute_latest_dates(earliest)
